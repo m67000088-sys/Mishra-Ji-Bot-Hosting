@@ -14,6 +14,8 @@ Run with:
 import logging
 import os
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -241,12 +243,42 @@ async def delete_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🗑️ Bot `{bot_row['id']}` deleted.", parse_mode="Markdown")
 
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"Mishra Ji Bot Hosting is running")
+
+    def log_message(self, format, *args):
+        return
+
+
+def start_health_server():
+    """Render Web Service ke health check ke liye lightweight HTTP server."""
+    port = int(os.environ.get("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Health server listening on 0.0.0.0:%s", port)
+    return server
+
+
 def main():
     os.makedirs("bots_data/users", exist_ok=True)
     db.init_db()
 
-    # 👇 Apna BotFather wala token yaha seedha paste karo (quotes ke andar)
-    token = "8934406278:AAE2y14gFtd3PA38Buyc-6ALzc3FFmxSD-8"
+    # Token GitHub/code mein nahi rakha gaya.
+    # Render Environment Variable ka naam: BOT_TOKEN
+    token = os.environ.get("BOT_TOKEN", "").strip()
+    if not token:
+        raise RuntimeError(
+            "BOT_TOKEN environment variable is not set. "
+            "Render Settings -> Environment Variables mein BOT_TOKEN set karo."
+        )
+
+    # Render Web Service ke liye HTTP health endpoint start karo.
+    start_health_server()
 
     app = ApplicationBuilder().token(token).build()
 
