@@ -137,7 +137,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending_token[user_id] = True
 
     await update.message.reply_text(
-        f"✅ File received. Entry point detected: `{entry_file}`\n\n"
+        f"✅ File received. Entry point detected: {entry_file}\n\n"
         "Ab apne bot ka Telegram BOT_TOKEN bhejo (BotFather se liya hua):",
         parse_mode="Markdown",
     )
@@ -194,7 +194,7 @@ async def list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_icon = "🟢 running" if running else "🔴 stopped"
         lines.append(f"`{b['id']}` - {b['bot_name']} ({status_icon})")
     lines.append("\nUse /stop <id>, /start_bot <id>, or /delete <id>")
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    await update.message.reply_text("\n".join(lines))
 
 
 async def stop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -208,7 +208,7 @@ async def stop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     manager.stop_bot(bot_row["pid"])
     db.update_status(bot_row["id"], "stopped", None)
-    await update.message.reply_text(f"🛑 Bot `{bot_row['id']}` stopped.", parse_mode="Markdown")
+    await update.message.reply_text(f"🛑 Bot `{bot_row['id']}` stopped.")
 
 
 async def start_bot_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -223,7 +223,7 @@ async def start_bot_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         pid = manager.start_bot(bot_row)
         db.update_status(bot_row["id"], "running", pid)
-        await update.message.reply_text(f"🚀 Bot `{bot_row['id']}` started.", parse_mode="Markdown")
+        await update.message.reply_text(f"🚀 Bot `{bot_row['id']}` started.")
     except Exception as e:
         await update.message.reply_text(f"❌ Start failed: {e}")
 
@@ -241,7 +241,7 @@ async def delete_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     import shutil
     shutil.rmtree(bot_row["folder_path"], ignore_errors=True)
     db.delete_bot(bot_row["id"], user_id)
-    await update.message.reply_text(f"🗑️ Bot `{bot_row['id']}` deleted.", parse_mode="Markdown")
+    await update.message.reply_text(f"🗑️ Bot `{bot_row['id']}` deleted.")
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -294,9 +294,8 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     logger.info("TheHostServer starting... (long polling)")
-
+    # Prevent event-loop errors on Render/Python 3.14.
     asyncio.set_event_loop(asyncio.new_event_loop())
-
     app.run_polling()
 
 
